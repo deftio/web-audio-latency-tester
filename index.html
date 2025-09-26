@@ -386,7 +386,7 @@
                 <div class="stat-value" id="beatsRecorded">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Audio Latency</div>
+                <div class="stat-label">Median Latency</div>
                 <div class="stat-value" id="avgLatency">- ms</div>
             </div>
             <div class="stat-card">
@@ -673,11 +673,10 @@
                     }
                     
                     if (closestBeat !== null) {
-                        // Calculate latency in milliseconds
+                        // Calculate latency in milliseconds (can be positive or negative)
                         const latency = (tapAudioTime - closestBeat) * 1000;
-                        // Only include measurements where user tapped after the beat (positive latency)
-                        // This measures true system latency, not user reaction time variance
-                        if (latency >= 0) {
+                        // Only reject extreme outliers that are clearly measurement errors
+                        if (Math.abs(latency) < 500) { // within +/- 500ms is reasonable
                             this.latencyData.push(latency);
                         }
                     }
@@ -700,15 +699,20 @@
                     return;
                 }
                 
-                const avg = this.latencyData.reduce((sum, val) => sum + val, 0) / this.latencyData.length;
-                const variance = this.latencyData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / this.latencyData.length;
+                // Use median for more robust measurement of system latency
+                const sortedData = [...this.latencyData].sort((a, b) => a - b);
+                const median = sortedData.length % 2 === 0 
+                    ? (sortedData[sortedData.length / 2 - 1] + sortedData[sortedData.length / 2]) / 2
+                    : sortedData[Math.floor(sortedData.length / 2)];
+                
+                const variance = this.latencyData.reduce((sum, val) => sum + Math.pow(val - median, 2), 0) / this.latencyData.length;
                 const stdDev = Math.sqrt(variance);
                 
                 // Calculate min and max latency
                 const minLat = Math.min(...this.latencyData);
                 const maxLat = Math.max(...this.latencyData);
                 
-                this.avgLatency.textContent = avg.toFixed(1) + ' ms';
+                this.avgLatency.textContent = median.toFixed(1) + ' ms';
                 this.stdDev.textContent = stdDev.toFixed(1) + ' ms';
                 this.minLatency.textContent = minLat.toFixed(1) + ' ms';
                 this.maxLatency.textContent = maxLat.toFixed(1) + ' ms';
