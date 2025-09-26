@@ -226,13 +226,16 @@
                 this.audioContext = null;
                 this.isRunning = false;
                 this.bpm = 120;
-                this.beatInterval = 60000 / this.bpm; // ms between beats
-                this.beatTimes = []; // timestamps when beats were played
-                this.tapTimes = []; // timestamps when user tapped
+                this.beatInterval = 60 / this.bpm; // seconds between beats (0.5 for 120 BPM)
+                this.beatTimes = []; // audio context timestamps when beats were played
+                this.tapTimes = []; // performance.now() timestamps when user tapped
                 this.latencyData = []; // calculated latencies for last 10 beats
-                this.beatStartTime = 0;
-                this.beatTimer = null;
+                this.nextBeatTime = 0; // next scheduled beat time in audio context
+                this.lookAhead = 25.0; // how far ahead to schedule beats (ms)
+                this.scheduleAheadTime = 0.1; // how far ahead to schedule (seconds)
+                this.timerWorker = null;
                 this.beatCount = 0;
+                this.audioStartTime = 0; // performance.now() when audio context started
                 
                 this.initializeElements();
                 this.setupEventListeners();
@@ -288,22 +291,30 @@
                 }
             }
 
-            createBeatSound() {
+            createBeatSound(when) {
                 const oscillator = this.audioContext.createOscillator();
                 const gainNode = this.audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(this.audioContext.destination);
                 
-                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(800, when);
                 oscillator.type = 'sine';
                 
-                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0, when);
+                gainNode.gain.linearRampToValueAtTime(0.3, when + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, when + 0.1);
                 
-                oscillator.start(this.audioContext.currentTime);
-                oscillator.stop(this.audioContext.currentTime + 0.1);
+                oscillator.start(when);
+                oscillator.stop(when + 0.1);
+                
+                // Record the exact audio context time when this beat plays
+                this.beatTimes.push(when);
+                
+                // Keep only last 20 beats for calculation
+                if (this.beatTimes.length > 20) {
+                    this.beatTimes.shift();
+                }
             }
 
             async startTest() {
@@ -314,7 +325,8 @@
                 this.tapTimes = [];
                 this.latencyData = [];
                 this.beatCount = 0;
-                this.beatStartTime = Date.now();
+                this.nextBeatTime = this.audioContext.currentTime;
+                this.audioStartTime = performance.now();
                 
                 this.startBtn.disabled = true;
                 this.stopBtn.disabled = false;
@@ -324,47 +336,42 @@
                 
                 this.status.textContent = 'Test running... Tap in sync with the beats!';
                 
-                this.scheduleBeats();
+                this.scheduler();
                 this.updateStats();
             }
 
-            scheduleBeats() {
-                if (!this.isRunning) return;
+            scheduler() {
+                // While there are notes that will need to play before the next interval, 
+                // schedule them and advance the pointer.
+                while (this.nextBeatTime < this.audioContext.currentTime + this.scheduleAheadTime && this.isRunning) {
+                    this.scheduleBeat(this.nextBeatTime);
+                    this.nextBeatTime += this.beatInterval;
+                }
                 
-                const currentTime = Date.now();
-                const nextBeatTime = this.beatStartTime + (this.beatCount * this.beatInterval);
-                const delay = Math.max(0, nextBeatTime - currentTime);
-                
-                this.beatTimer = setTimeout(() => {
-                    if (!this.isRunning) return;
-                    
-                    this.playBeat();
-                    this.beatCount++;
-                    this.scheduleBeats();
-                }, delay);
+                if (this.isRunning) {
+                    this.timerID = setTimeout(() => this.scheduler(), this.lookAhead);
+                }
             }
 
-            playBeat() {
-                const beatTime = Date.now();
-                this.beatTimes.push(beatTime);
-                this.createBeatSound();
+            scheduleBeat(when) {
+                this.createBeatSound(when);
                 
-                // Visual beat indicator
-                this.beatIndicator.classList.add('active');
+                // Schedule visual indicator to match audio timing
+                const delay = (when - this.audioContext.currentTime) * 1000;
                 setTimeout(() => {
-                    this.beatIndicator.classList.remove('active');
-                }, 100);
-                
-                // Keep only last 20 beats for calculation
-                if (this.beatTimes.length > 20) {
-                    this.beatTimes.shift();
-                }
+                    if (this.isRunning) {
+                        this.beatIndicator.classList.add('active');
+                        setTimeout(() => {
+                            this.beatIndicator.classList.remove('active');
+                        }, 100);
+                    }
+                }, Math.max(0, delay));
             }
 
             handleTap() {
                 if (!this.isRunning) return;
                 
-                const tapTime = Date.now();
+                const tapTime = performance.now();
                 this.tapTimes.push(tapTime);
                 
                 // Keep only last 20 taps
@@ -377,18 +384,27 @@
                 this.drawGraph();
             }
 
+            // Convert performance.now() time to audio context time
+            performanceToAudioTime(performanceTime) {
+                const elapsedSinceStart = performanceTime - this.audioStartTime;
+                return (elapsedSinceStart / 1000) + (this.audioContext.currentTime - (performance.now() - this.audioStartTime) / 1000);
+            }
+
             calculateLatency() {
-                if (this.beatTimes.length < 2 || this.tapTimes.length < 1) return;
+                if (this.beatTimes.length < 1 || this.tapTimes.length < 1) return;
                 
                 // Find the closest beat for each tap
                 this.latencyData = [];
                 
                 for (let tapTime of this.tapTimes) {
+                    // Convert tap time to audio context time
+                    const tapAudioTime = this.performanceToAudioTime(tapTime);
+                    
                     let closestBeat = null;
                     let minDiff = Infinity;
                     
                     for (let beatTime of this.beatTimes) {
-                        const diff = Math.abs(tapTime - beatTime);
+                        const diff = Math.abs(tapAudioTime - beatTime);
                         if (diff < minDiff && diff < this.beatInterval / 2) {
                             minDiff = diff;
                             closestBeat = beatTime;
@@ -396,7 +412,8 @@
                     }
                     
                     if (closestBeat !== null) {
-                        const latency = tapTime - closestBeat;
+                        // Calculate latency in milliseconds
+                        const latency = (tapAudioTime - closestBeat) * 1000;
                         this.latencyData.push(latency);
                     }
                 }
@@ -511,9 +528,9 @@
             stopTest() {
                 this.isRunning = false;
                 
-                if (this.beatTimer) {
-                    clearTimeout(this.beatTimer);
-                    this.beatTimer = null;
+                if (this.timerID) {
+                    clearTimeout(this.timerID);
+                    this.timerID = null;
                 }
                 
                 if (this.audioContext) {
