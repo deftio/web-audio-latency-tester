@@ -777,14 +777,14 @@
                         
                         // Draw Y-axis label
                         const sign = value > 0 ? '+' : '';
-                        ctx.fillText(sign + value.toFixed(0) + 'ms', paddingLeft - 15, y + 4);
+                        ctx.fillText(sign + value.toFixed(0) + 'ms', paddingLeft - 5, y + 4);
                     }
                 }
                 
                 // Draw zero line label (prominent)
                 ctx.fillStyle = 'rgba(255, 255, 255, 1)';
                 ctx.font = 'bold 12px Arial';
-                ctx.fillText('0ms', paddingLeft - 15, zeroY + 4);
+                ctx.fillText('0ms', paddingLeft - 5, zeroY + 4);
                 
                 // Draw data points and line
                 ctx.strokeStyle = '#3498db';
