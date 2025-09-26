@@ -1,4 +1,4 @@
-# 🎧 Headphone Latency Tester
+# 🎧 Audio Latency Tester 🔊
 
 A precise, browser-based tool for measuring audio latency in headphones and audio systems. This application helps you determine the delay between when audio is generated and when you actually hear it through your audio equipment.
 
