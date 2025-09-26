@@ -102,59 +102,44 @@
             border-color: rgba(76, 175, 80, 0.5);
         }
 
-        .status {
-            text-align: center;
-            font-size: 1rem;
-            margin-bottom: 0.8rem;
-            min-height: 1.2rem;
-            color: #ecf0f1;
-            font-weight: 500;
-        }
-
-        @media (max-width: 768px) {
-            .status {
-                font-size: 0.95rem;
-                margin-bottom: 0.6rem;
-            }
-        }
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 0.5rem;
-            margin-bottom: 0.8rem;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.4rem;
+            margin-bottom: 0.6rem;
         }
 
         @media (max-width: 768px) {
             .stats {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 0.4rem;
+                gap: 0.3rem;
             }
         }
 
         .stat-card {
             background: rgba(255, 255, 255, 0.15);
-            padding: 0.8rem;
-            border-radius: 12px;
+            padding: 0.5rem;
+            border-radius: 8px;
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         @media (max-width: 768px) {
             .stat-card {
-                padding: 0.6rem;
+                padding: 0.4rem;
             }
         }
 
         .stat-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #bdc3c7;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.2rem;
             font-weight: 500;
         }
 
         .stat-value {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: bold;
             color: #ecf0f1;
         }
@@ -164,7 +149,7 @@
                 font-size: 0.75rem;
             }
             .stat-value {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
         }
 
@@ -186,7 +171,7 @@
 
         canvas {
             width: 100%;
-            height: 200px;
+            height: 220px;
             border-radius: 8px;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -194,7 +179,7 @@
 
         @media (max-width: 768px) {
             canvas {
-                height: 180px;
+                height: 200px;
             }
         }
 
@@ -390,7 +375,6 @@
             <button id="tapBtn" disabled>Tap Beat (Space)</button>
         </div>
 
-        <div class="status" id="status">Click "Start Test" to measure audio latency</div>
 
         <div class="stats">
             <div class="stat-card">
@@ -446,7 +430,6 @@
                 this.startBtn = document.getElementById('startBtn');
                 this.stopBtn = document.getElementById('stopBtn');
                 this.tapBtn = document.getElementById('tapBtn');
-                this.status = document.getElementById('status');
                 this.beatIndicator = document.getElementById('beatIndicator');
                 this.visualToggle = document.getElementById('visualToggle');
                 this.beatsRecorded = document.getElementById('beatsRecorded');
@@ -573,7 +556,6 @@
                 this.startBtn.classList.remove('active');
                 this.stopBtn.classList.add('active');
                 
-                this.status.textContent = 'Test running... Tap when you hear each beat!';
                 
                 this.scheduler();
                 this.updateStats();
@@ -888,14 +870,6 @@
                 this.startBtn.classList.add('active');
                 this.stopBtn.classList.remove('active');
                 
-                const beatsCount = this.latencyData.length;
-                if (beatsCount >= 10) {
-                    this.status.textContent = `Test completed! Audio latency measured from ${beatsCount} beats.`;
-                } else if (beatsCount > 0) {
-                    this.status.textContent = `Test stopped. Need at least 10 beats for accurate measurement (had ${beatsCount}).`;
-                } else {
-                    this.status.textContent = 'Test stopped. No audio latency data recorded.';
-                }
             }
         }
 
