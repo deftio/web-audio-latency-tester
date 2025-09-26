@@ -365,6 +365,10 @@
                 <input type="checkbox" id="visualToggle">
                 <span class="toggle-text">Visual Beat Indicator</span>
             </label>
+            <label class="toggle-container">
+                <input type="checkbox" id="fixedScale">
+                <span class="toggle-text">Fixed Y-Axis Scale</span>
+            </label>
         </div>
         
         <div class="beat-indicator" id="beatIndicator" style="display: none;"></div>
@@ -432,6 +436,7 @@
                 this.tapBtn = document.getElementById('tapBtn');
                 this.beatIndicator = document.getElementById('beatIndicator');
                 this.visualToggle = document.getElementById('visualToggle');
+                this.fixedScaleToggle = document.getElementById('fixedScale');
                 this.beatsRecorded = document.getElementById('beatsRecorded');
                 this.avgLatency = document.getElementById('avgLatency');
                 this.stdDev = document.getElementById('stdDev');
@@ -730,9 +735,16 @@
                 const graphWidth = rect.width - paddingLeft - paddingRight;
                 const graphHeight = rect.height - paddingTop - paddingBottom;
                 
-                // Find min/max for scaling with some padding
-                const maxLatency = Math.max(...this.latencyData.map(Math.abs));
-                const maxRange = Math.max(50, maxLatency * 1.2); // At least 50ms range
+                // Determine scaling based on fixed vs dynamic mode
+                let maxRange;
+                if (this.fixedScaleToggle.checked) {
+                    // Fixed scale: -300ms to +700ms (total range adjusted to center better)
+                    maxRange = 500; // This gives us approximately -500 to +500ms range
+                } else {
+                    // Dynamic scaling with some padding
+                    const maxLatency = Math.max(...this.latencyData.map(Math.abs));
+                    maxRange = Math.max(50, maxLatency * 1.2); // At least 50ms range
+                }
                 const scale = maxRange > 0 ? graphHeight / (2 * maxRange) : 1;
                 
                 // Draw zero line (perfect timing)
