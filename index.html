@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headphone Latency Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.active {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+
+        .status {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            min-height: 1.5rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .graph-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .instructions h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .instructions li::before {
+            content: "•";
+            color: #4CAF50;
+            font-weight: bold;
+            position: absolute;
+            left: -1rem;
+        }
+
+        .beat-indicator {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            margin: 0 auto 1rem;
+            transition: all 0.1s ease;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .beat-indicator.active {
+            background: rgba(76, 175, 80, 0.8);
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎧 Headphone Latency Tester</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ul>
+                <li>Click "Start Test" to begin the 120 BPM beat</li>
+                <li>Press SPACEBAR or click the "Tap Beat" button in sync with each beat</li>
+                <li>The app will measure your timing accuracy over the last 10 beats</li>
+                <li>Results show your average latency and consistency</li>
+            </ul>
+        </div>
+
+        <div class="beat-indicator" id="beatIndicator"></div>
+
+        <div class="controls">
+            <button id="startBtn">Start Test</button>
+            <button id="stopBtn" disabled>Stop Test</button>
+            <button id="tapBtn" disabled>Tap Beat (Space)</button>
+        </div>
+
+        <div class="status" id="status">Click "Start Test" to begin</div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Beats Recorded</div>
+                <div class="stat-value" id="beatsRecorded">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Latency</div>
+                <div class="stat-value" id="avgLatency">- ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Standard Deviation</div>
+                <div class="stat-value" id="stdDev">- ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Accuracy Score</div>
+                <div class="stat-value" id="accuracy">- %</div>
+            </div>
+        </div>
+
+        <div class="graph-container">
+            <canvas id="timingGraph"></canvas>
+        </div>
+    </div>
+
+    <script>
+        class LatencyTester {
+            constructor() {
+                this.audioContext = null;
+                this.isRunning = false;
+                this.bpm = 120;
+                this.beatInterval = 60000 / this.bpm; // ms between beats
+                this.beatTimes = []; // timestamps when beats were played
+                this.tapTimes = []; // timestamps when user tapped
+                this.latencyData = []; // calculated latencies for last 10 beats
+                this.beatStartTime = 0;
+                this.beatTimer = null;
+                this.beatCount = 0;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.setupCanvas();
+            }
+
+            initializeElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.tapBtn = document.getElementById('tapBtn');
+                this.status = document.getElementById('status');
+                this.beatIndicator = document.getElementById('beatIndicator');
+                this.beatsRecorded = document.getElementById('beatsRecorded');
+                this.avgLatency = document.getElementById('avgLatency');
+                this.stdDev = document.getElementById('stdDev');
+                this.accuracy = document.getElementById('accuracy');
+                this.canvas = document.getElementById('timingGraph');
+                this.ctx = this.canvas.getContext('2d');
+            }
+
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startTest());
+                this.stopBtn.addEventListener('click', () => this.stopTest());
+                this.tapBtn.addEventListener('click', () => this.handleTap());
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && this.isRunning) {
+                        e.preventDefault();
+                        this.handleTap();
+                    }
+                });
+            }
+
+            setupCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width * window.devicePixelRatio;
+                this.canvas.height = rect.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                this.drawGraph();
+            }
+
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Failed to initialize audio:', error);
+                    this.status.textContent = 'Error: Could not initialize audio';
+                    return false;
+                }
+            }
+
+            createBeatSound() {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+
+            async startTest() {
+                if (!await this.initAudio()) return;
+                
+                this.isRunning = true;
+                this.beatTimes = [];
+                this.tapTimes = [];
+                this.latencyData = [];
+                this.beatCount = 0;
+                this.beatStartTime = Date.now();
+                
+                this.startBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                this.tapBtn.disabled = false;
+                this.startBtn.classList.remove('active');
+                this.stopBtn.classList.add('active');
+                
+                this.status.textContent = 'Test running... Tap in sync with the beats!';
+                
+                this.scheduleBeats();
+                this.updateStats();
+            }
+
+            scheduleBeats() {
+                if (!this.isRunning) return;
+                
+                const currentTime = Date.now();
+                const nextBeatTime = this.beatStartTime + (this.beatCount * this.beatInterval);
+                const delay = Math.max(0, nextBeatTime - currentTime);
+                
+                this.beatTimer = setTimeout(() => {
+                    if (!this.isRunning) return;
+                    
+                    this.playBeat();
+                    this.beatCount++;
+                    this.scheduleBeats();
+                }, delay);
+            }
+
+            playBeat() {
+                const beatTime = Date.now();
+                this.beatTimes.push(beatTime);
+                this.createBeatSound();
+                
+                // Visual beat indicator
+                this.beatIndicator.classList.add('active');
+                setTimeout(() => {
+                    this.beatIndicator.classList.remove('active');
+                }, 100);
+                
+                // Keep only last 20 beats for calculation
+                if (this.beatTimes.length > 20) {
+                    this.beatTimes.shift();
+                }
+            }
+
+            handleTap() {
+                if (!this.isRunning) return;
+                
+                const tapTime = Date.now();
+                this.tapTimes.push(tapTime);
+                
+                // Keep only last 20 taps
+                if (this.tapTimes.length > 20) {
+                    this.tapTimes.shift();
+                }
+                
+                this.calculateLatency();
+                this.updateStats();
+                this.drawGraph();
+            }
+
+            calculateLatency() {
+                if (this.beatTimes.length < 2 || this.tapTimes.length < 1) return;
+                
+                // Find the closest beat for each tap
+                this.latencyData = [];
+                
+                for (let tapTime of this.tapTimes) {
+                    let closestBeat = null;
+                    let minDiff = Infinity;
+                    
+                    for (let beatTime of this.beatTimes) {
+                        const diff = Math.abs(tapTime - beatTime);
+                        if (diff < minDiff && diff < this.beatInterval / 2) {
+                            minDiff = diff;
+                            closestBeat = beatTime;
+                        }
+                    }
+                    
+                    if (closestBeat !== null) {
+                        const latency = tapTime - closestBeat;
+                        this.latencyData.push(latency);
+                    }
+                }
+                
+                // Keep only last 10 measurements
+                if (this.latencyData.length > 10) {
+                    this.latencyData = this.latencyData.slice(-10);
+                }
+            }
+
+            updateStats() {
+                this.beatsRecorded.textContent = this.latencyData.length;
+                
+                if (this.latencyData.length === 0) {
+                    this.avgLatency.textContent = '- ms';
+                    this.stdDev.textContent = '- ms';
+                    this.accuracy.textContent = '- %';
+                    return;
+                }
+                
+                const avg = this.latencyData.reduce((sum, val) => sum + val, 0) / this.latencyData.length;
+                const variance = this.latencyData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / this.latencyData.length;
+                const stdDev = Math.sqrt(variance);
+                
+                // Calculate accuracy as percentage based on how close to 0ms latency
+                const avgAbsLatency = this.latencyData.reduce((sum, val) => sum + Math.abs(val), 0) / this.latencyData.length;
+                const accuracy = Math.max(0, 100 - (avgAbsLatency / 50) * 100); // 50ms = 0% accuracy
+                
+                this.avgLatency.textContent = avg.toFixed(1) + ' ms';
+                this.stdDev.textContent = stdDev.toFixed(1) + ' ms';
+                this.accuracy.textContent = accuracy.toFixed(1) + '%';
+            }
+
+            drawGraph() {
+                const canvas = this.canvas;
+                const ctx = this.ctx;
+                const rect = canvas.getBoundingClientRect();
+                
+                ctx.clearRect(0, 0, rect.width, rect.height);
+                
+                if (this.latencyData.length === 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No data yet - start tapping!', rect.width / 2, rect.height / 2);
+                    return;
+                }
+                
+                const padding = 40;
+                const graphWidth = rect.width - 2 * padding;
+                const graphHeight = rect.height - 2 * padding;
+                
+                // Find min/max for scaling
+                const maxLatency = Math.max(...this.latencyData.map(Math.abs));
+                const scale = maxLatency > 0 ? graphHeight / (2 * maxLatency) : 1;
+                
+                // Draw zero line
+                const zeroY = padding + graphHeight / 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padding, zeroY);
+                ctx.lineTo(padding + graphWidth, zeroY);
+                ctx.stroke();
+                
+                // Draw grid lines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                for (let i = 1; i <= 4; i++) {
+                    const y = padding + (graphHeight * i) / 5;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(padding + graphWidth, y);
+                    ctx.stroke();
+                }
+                
+                // Draw data points and line
+                ctx.strokeStyle = '#4CAF50';
+                ctx.fillStyle = '#4CAF50';
+                ctx.lineWidth = 2;
+                
+                const stepX = graphWidth / Math.max(9, this.latencyData.length - 1);
+                
+                ctx.beginPath();
+                for (let i = 0; i < this.latencyData.length; i++) {
+                    const x = padding + i * stepX;
+                    const y = zeroY - (this.latencyData[i] * scale);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Draw point
+                    ctx.fillRect(x - 2, y - 2, 4, 4);
+                }
+                ctx.stroke();
+                
+                // Draw labels
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Timing Difference (ms)', rect.width / 2, rect.height - 5);
+                
+                ctx.save();
+                ctx.translate(15, rect.height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('Latency', 0, 0);
+                ctx.restore();
+            }
+
+            stopTest() {
+                this.isRunning = false;
+                
+                if (this.beatTimer) {
+                    clearTimeout(this.beatTimer);
+                    this.beatTimer = null;
+                }
+                
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+                
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.tapBtn.disabled = true;
+                this.startBtn.classList.add('active');
+                this.stopBtn.classList.remove('active');
+                
+                const beatsCount = this.latencyData.length;
+                if (beatsCount > 0) {
+                    this.status.textContent = `Test completed! Recorded ${beatsCount} synchronized beats.`;
+                } else {
+                    this.status.textContent = 'Test stopped. No synchronized beats recorded.';
+                }
+            }
+        }
+
+        // Initialize the app when the page loads
+        window.addEventListener('load', () => {
+            new LatencyTester();
+        });
+
+        // Handle canvas resize
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('timingGraph');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        });
+    </script>
+</body>
+</html>
