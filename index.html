@@ -451,6 +451,7 @@
                 this.stopBtn.addEventListener('click', () => this.stopTest());
                 this.tapBtn.addEventListener('click', () => this.handleTap());
                 this.visualToggle.addEventListener('change', () => this.toggleVisualIndicator());
+                this.fixedScaleToggle.addEventListener('change', () => this.drawGraph());
                 
                 document.addEventListener('keydown', (e) => {
                     if (e.code === 'Space' && this.isRunning) {
