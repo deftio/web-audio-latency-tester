@@ -488,13 +488,11 @@
                 const kickGain = this.audioContext.createGain();
                 const kickFilter = this.audioContext.createBiquadFilter();
                 
-                // Create noise for the snap/attack
-                const bufferSize = this.audioContext.sampleRate * 0.1;
-                const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-                const noiseData = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    noiseData[i] = Math.random() * 2 - 1;
+                // Use consistent noise buffer for all beats
+                if (!this.noiseBuffer) {
+                    this.generateNoiseBuffer();
                 }
+                const noiseBuffer = this.noiseBuffer;
                 
                 const noiseSource = this.audioContext.createBufferSource();
                 const noiseGain = this.audioContext.createGain();
@@ -555,6 +553,9 @@
                 // Start first beat slightly ahead to ensure it's audible
                 this.nextBeatTime = this.audioContext.currentTime + 0.1;
                 this.audioStartTime = performance.now();
+                
+                // Generate consistent noise buffer for all beats
+                this.generateNoiseBuffer();
                 
                 this.startBtn.disabled = true;
                 this.stopBtn.disabled = false;
@@ -744,8 +745,8 @@
                 // Determine scaling based on fixed vs dynamic mode
                 let maxRange;
                 if (this.fixedScaleToggle.checked) {
-                    // Fixed scale: -300ms to +700ms (total range adjusted to center better)
-                    maxRange = 500; // This gives us approximately -500 to +500ms range
+                    // Fixed scale: -450ms to +450ms
+                    maxRange = 450; // This gives us approximately -450 to +450ms range
                 } else {
                     // Dynamic scaling with some padding
                     const maxLatency = Math.max(...this.latencyData.map(Math.abs));
@@ -891,6 +892,24 @@
                 this.startBtn.classList.add('active');
                 this.stopBtn.classList.remove('active');
                 
+            }
+            
+            generateNoiseBuffer() {
+                // Create a consistent noise buffer that's reused for all beats
+                const bufferSize = this.audioContext.sampleRate * 0.1;
+                this.noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const noiseData = this.noiseBuffer.getChannelData(0);
+                
+                // Use a deterministic noise pattern instead of random
+                // This ensures all beats sound identical
+                for (let i = 0; i < bufferSize; i++) {
+                    const t = i / this.audioContext.sampleRate;
+                    // Create pseudo-noise using multiple sine waves for consistency
+                    noiseData[i] = (Math.sin(t * 3000) * 0.3 + 
+                                   Math.sin(t * 5000) * 0.2 + 
+                                   Math.sin(t * 7000) * 0.1) * 
+                                   Math.exp(-t * 30); // Envelope
+                }
             }
         }
 
