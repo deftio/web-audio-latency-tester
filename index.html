@@ -723,9 +723,12 @@
                     return;
                 }
                 
-                const padding = 80;
-                const graphWidth = rect.width - 2 * padding;
-                const graphHeight = rect.height - 2 * padding;
+                const paddingLeft = 60;
+                const paddingRight = 20;
+                const paddingTop = 15;
+                const paddingBottom = 15;
+                const graphWidth = rect.width - paddingLeft - paddingRight;
+                const graphHeight = rect.height - paddingTop - paddingBottom;
                 
                 // Find min/max for scaling with some padding
                 const maxLatency = Math.max(...this.latencyData.map(Math.abs));
@@ -733,12 +736,12 @@
                 const scale = maxRange > 0 ? graphHeight / (2 * maxRange) : 1;
                 
                 // Draw zero line (perfect timing)
-                const zeroY = padding + graphHeight / 2;
+                const zeroY = paddingTop + graphHeight / 2;
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(padding, zeroY);
-                ctx.lineTo(padding + graphWidth, zeroY);
+                ctx.moveTo(paddingLeft, zeroY);
+                ctx.lineTo(paddingLeft + graphWidth, zeroY);
                 ctx.stroke();
                 
                 // Draw grid lines and Y-axis labels with better spacing
@@ -765,23 +768,23 @@
                     const y = zeroY - (value * scale);
                     
                     // Only draw if within bounds
-                    if (y >= padding && y <= padding + graphHeight) {
+                    if (y >= paddingTop && y <= paddingTop + graphHeight) {
                         // Draw grid line
                         ctx.beginPath();
-                        ctx.moveTo(padding, y);
-                        ctx.lineTo(padding + graphWidth, y);
+                        ctx.moveTo(paddingLeft, y);
+                        ctx.lineTo(paddingLeft + graphWidth, y);
                         ctx.stroke();
                         
                         // Draw Y-axis label
                         const sign = value > 0 ? '+' : '';
-                        ctx.fillText(sign + value.toFixed(0) + 'ms', padding - 15, y + 4);
+                        ctx.fillText(sign + value.toFixed(0) + 'ms', paddingLeft - 15, y + 4);
                     }
                 }
                 
                 // Draw zero line label (prominent)
                 ctx.fillStyle = 'rgba(255, 255, 255, 1)';
                 ctx.font = 'bold 12px Arial';
-                ctx.fillText('0ms', padding - 15, zeroY + 4);
+                ctx.fillText('0ms', paddingLeft - 15, zeroY + 4);
                 
                 // Draw data points and line
                 ctx.strokeStyle = '#3498db';
@@ -792,7 +795,7 @@
                 
                 ctx.beginPath();
                 for (let i = 0; i < this.latencyData.length; i++) {
-                    const x = padding + i * stepX;
+                    const x = paddingLeft + i * stepX;
                     const y = zeroY - (this.latencyData[i] * scale);
                     
                     if (i === 0) {
@@ -820,7 +823,7 @@
                 ctx.strokeStyle = '#3498db';
                 ctx.beginPath();
                 for (let i = 0; i < this.latencyData.length; i++) {
-                    const x = padding + i * stepX;
+                    const x = paddingLeft + i * stepX;
                     const y = zeroY - (this.latencyData[i] * scale);
                     
                     if (i === 0) {
@@ -848,7 +851,7 @@
                 ctx.font = '9px Arial';
                 ctx.textAlign = 'left';
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                ctx.fillText('Above 0ms = Late  •  Below 0ms = Early', padding, 20);
+                ctx.fillText('Above 0ms = Late  •  Below 0ms = Early', paddingLeft, 20);
             }
 
             stopTest() {
