@@ -405,8 +405,8 @@
                 <div class="stat-value" id="stdDev">- ms</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Consistency</div>
-                <div class="stat-value" id="accuracy">- %</div>
+                <div class="stat-label">Range</div>
+                <div class="stat-value" id="accuracy">- ms</div>
             </div>
         </div>
 
@@ -708,13 +708,14 @@
                 const variance = this.latencyData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / this.latencyData.length;
                 const stdDev = Math.sqrt(variance);
                 
-                // Calculate consistency as percentage based on standard deviation
-                // Lower standard deviation = higher consistency
-                const consistency = Math.max(0, 100 - (stdDev / 25) * 100); // 25ms std dev = 0% consistency
+                // Calculate range (max - min latency)
+                const minLatency = Math.min(...this.latencyData);
+                const maxLatency = Math.max(...this.latencyData);
+                const range = maxLatency - minLatency;
                 
                 this.avgLatency.textContent = avg.toFixed(1) + ' ms';
                 this.stdDev.textContent = stdDev.toFixed(1) + ' ms';
-                this.accuracy.textContent = consistency.toFixed(1) + '%';
+                this.accuracy.textContent = range.toFixed(1) + ' ms';
             }
 
             drawGraph() {
