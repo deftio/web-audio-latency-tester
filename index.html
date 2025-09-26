@@ -416,7 +416,7 @@
                 this.bpm = 120;
                 this.beatInterval = 60 / this.bpm; // seconds between beats (0.5 for 120 BPM)
                 this.beatTimes = []; // audio context timestamps when beats were played
-                this.tapTimes = []; // performance.now() timestamps when user tapped
+                this.tapTimes = []; // audio context timestamps when user tapped
                 this.latencyData = []; // calculated latencies for last 10 beats
                 this.nextBeatTime = 0; // next scheduled beat time in audio context
                 this.lookAhead = 25.0; // how far ahead to schedule beats (ms)
@@ -552,7 +552,8 @@
                 this.tapTimes = [];
                 this.latencyData = [];
                 this.beatCount = 0;
-                this.nextBeatTime = this.audioContext.currentTime;
+                // Start first beat slightly ahead to ensure it's audible
+                this.nextBeatTime = this.audioContext.currentTime + 0.1;
                 this.audioStartTime = performance.now();
                 
                 this.startBtn.disabled = true;
@@ -634,7 +635,8 @@
             handleTap() {
                 if (!this.isRunning) return;
                 
-                const tapTime = performance.now();
+                // Store audio context time directly to avoid conversion drift
+                const tapTime = this.audioContext.currentTime;
                 this.tapTimes.push(tapTime);
                 
                 // Keep only last 20 taps
@@ -647,11 +649,7 @@
                 this.drawGraph();
             }
 
-            // Convert performance.now() time to audio context time
-            performanceToAudioTime(performanceTime) {
-                const elapsedSinceStart = performanceTime - this.audioStartTime;
-                return (elapsedSinceStart / 1000) + (this.audioContext.currentTime - (performance.now() - this.audioStartTime) / 1000);
-            }
+            // Removed buggy performanceToAudioTime() - now capturing audio context time directly
 
             calculateLatency() {
                 if (this.beatTimes.length < 1 || this.tapTimes.length < 1) return;
@@ -660,8 +658,8 @@
                 this.latencyData = [];
                 
                 for (let tapTime of this.tapTimes) {
-                    // Convert tap time to audio context time
-                    const tapAudioTime = this.performanceToAudioTime(tapTime);
+                    // tapTime is already in audio context time
+                    const tapAudioTime = tapTime;
                     
                     let closestBeat = null;
                     let minDiff = Infinity;
@@ -677,7 +675,11 @@
                     if (closestBeat !== null) {
                         // Calculate latency in milliseconds
                         const latency = (tapAudioTime - closestBeat) * 1000;
-                        this.latencyData.push(latency);
+                        // Only include measurements where user tapped after the beat (positive latency)
+                        // This measures true system latency, not user reaction time variance
+                        if (latency >= 0) {
+                            this.latencyData.push(latency);
+                        }
                     }
                 }
                 
