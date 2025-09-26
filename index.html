@@ -120,15 +120,15 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 0.6rem;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.5rem;
             margin-bottom: 0.8rem;
         }
 
         @media (max-width: 768px) {
             .stats {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 0.5rem;
+                gap: 0.4rem;
             }
         }
 
@@ -186,7 +186,7 @@
 
         canvas {
             width: 100%;
-            height: 160px;
+            height: 200px;
             border-radius: 8px;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -194,7 +194,7 @@
 
         @media (max-width: 768px) {
             canvas {
-                height: 140px;
+                height: 180px;
             }
         }
 
@@ -406,8 +406,12 @@
                 <div class="stat-value" id="stdDev">- ms</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Range</div>
-                <div class="stat-value" id="accuracy">- ms</div>
+                <div class="stat-label">Min Latency</div>
+                <div class="stat-value" id="minLatency">- ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Max Latency</div>
+                <div class="stat-value" id="maxLatency">- ms</div>
             </div>
         </div>
 
@@ -448,7 +452,8 @@
                 this.beatsRecorded = document.getElementById('beatsRecorded');
                 this.avgLatency = document.getElementById('avgLatency');
                 this.stdDev = document.getElementById('stdDev');
-                this.accuracy = document.getElementById('accuracy');
+                this.minLatency = document.getElementById('minLatency');
+                this.maxLatency = document.getElementById('maxLatency');
                 this.canvas = document.getElementById('timingGraph');
                 this.ctx = this.canvas.getContext('2d');
             }
@@ -701,7 +706,8 @@
                 if (this.latencyData.length < 10) {
                     this.avgLatency.textContent = 'Collecting...';
                     this.stdDev.textContent = 'Collecting...';
-                    this.accuracy.textContent = 'Collecting...';
+                    this.minLatency.textContent = 'Collecting...';
+                    this.maxLatency.textContent = 'Collecting...';
                     return;
                 }
                 
@@ -709,14 +715,14 @@
                 const variance = this.latencyData.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / this.latencyData.length;
                 const stdDev = Math.sqrt(variance);
                 
-                // Calculate range (max - min latency)
-                const minLatency = Math.min(...this.latencyData);
-                const maxLatency = Math.max(...this.latencyData);
-                const range = maxLatency - minLatency;
+                // Calculate min and max latency
+                const minLat = Math.min(...this.latencyData);
+                const maxLat = Math.max(...this.latencyData);
                 
                 this.avgLatency.textContent = avg.toFixed(1) + ' ms';
                 this.stdDev.textContent = stdDev.toFixed(1) + ' ms';
-                this.accuracy.textContent = range.toFixed(1) + ' ms';
+                this.minLatency.textContent = minLat.toFixed(1) + ' ms';
+                this.maxLatency.textContent = maxLat.toFixed(1) + ' ms';
             }
 
             drawGraph() {
@@ -735,7 +741,7 @@
                     return;
                 }
                 
-                const padding = 70;
+                const padding = 80;
                 const graphWidth = rect.width - 2 * padding;
                 const graphHeight = rect.height - 2 * padding;
                 
@@ -757,15 +763,24 @@
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.font = '10px Arial';
+                ctx.font = '11px Arial';
                 ctx.textAlign = 'right';
                 
-                // Only draw 3 labels above and below zero to prevent overlap
-                const labelPositions = [-2, -1, 1, 2]; // Skip 0, we'll draw it separately
+                // Create cleaner label intervals
+                const step = Math.ceil(maxRange / 4 / 10) * 10; // Round to nearest 10ms
+                const labelValues = [];
                 
-                for (let pos of labelPositions) {
-                    const y = zeroY - (pos * graphHeight / 4);
-                    const latencyValue = pos * maxRange / 2;
+                // Generate positive values
+                for (let i = step; i <= maxRange; i += step) {
+                    labelValues.push(i);
+                }
+                // Generate negative values  
+                for (let i = -step; i >= -maxRange; i -= step) {
+                    labelValues.push(i);
+                }
+                
+                for (let value of labelValues) {
+                    const y = zeroY - (value * scale);
                     
                     // Only draw if within bounds
                     if (y >= padding && y <= padding + graphHeight) {
@@ -775,16 +790,16 @@
                         ctx.lineTo(padding + graphWidth, y);
                         ctx.stroke();
                         
-                        // Draw Y-axis label with better positioning
-                        const sign = latencyValue >= 0 ? '+' : '';
-                        ctx.fillText(sign + latencyValue.toFixed(0) + 'ms', padding - 12, y + 3);
+                        // Draw Y-axis label
+                        const sign = value > 0 ? '+' : '';
+                        ctx.fillText(sign + value.toFixed(0) + 'ms', padding - 15, y + 4);
                     }
                 }
                 
-                // Draw zero line label
+                // Draw zero line label (prominent)
                 ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-                ctx.font = '11px Arial';
-                ctx.fillText('0ms', padding - 12, zeroY + 3);
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText('0ms', padding - 15, zeroY + 4);
                 
                 // Draw data points and line
                 ctx.strokeStyle = '#3498db';
