@@ -370,7 +370,8 @@
                 <li>This measures your headphone/audio system's latency, not your timing skill</li>
                 <li>Click "Start Test" to begin the 120 BPM audio beat</li>
                 <li>Press SPACEBAR or click "Tap Beat" when you hear each beat</li>
-                <li>The app calculates audio latency using the last 10 synchronized beats</li>
+                <li>The app calculates audio latency using the last 20 synchronized beats</li>
+                <li>Results appear after at least 10 measurements for accuracy</li>
             </ul>
         </div>
 
@@ -688,19 +689,19 @@
                     }
                 }
                 
-                // Keep only last 10 measurements
-                if (this.latencyData.length > 10) {
-                    this.latencyData = this.latencyData.slice(-10);
+                // Keep only last 20 measurements
+                if (this.latencyData.length > 20) {
+                    this.latencyData = this.latencyData.slice(-20);
                 }
             }
 
             updateStats() {
                 this.beatsRecorded.textContent = this.latencyData.length;
                 
-                if (this.latencyData.length === 0) {
-                    this.avgLatency.textContent = '- ms';
-                    this.stdDev.textContent = '- ms';
-                    this.accuracy.textContent = '- %';
+                if (this.latencyData.length < 10) {
+                    this.avgLatency.textContent = 'Collecting...';
+                    this.stdDev.textContent = 'Collecting...';
+                    this.accuracy.textContent = 'Collecting...';
                     return;
                 }
                 
@@ -725,11 +726,12 @@
                 
                 ctx.clearRect(0, 0, rect.width, rect.height);
                 
-                if (this.latencyData.length === 0) {
+                if (this.latencyData.length < 10) {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                     ctx.font = '14px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText('No data yet - start tapping!', rect.width / 2, rect.height / 2);
+                    const message = this.latencyData.length === 0 ? 'No data yet - start tapping!' : `Collecting data... (${this.latencyData.length}/10)`;
+                    ctx.fillText(message, rect.width / 2, rect.height / 2);
                     return;
                 }
                 
@@ -872,8 +874,10 @@
                 this.stopBtn.classList.remove('active');
                 
                 const beatsCount = this.latencyData.length;
-                if (beatsCount > 0) {
+                if (beatsCount >= 10) {
                     this.status.textContent = `Test completed! Audio latency measured from ${beatsCount} beats.`;
+                } else if (beatsCount > 0) {
+                    this.status.textContent = `Test stopped. Need at least 10 beats for accurate measurement (had ${beatsCount}).`;
                 } else {
                     this.status.textContent = 'Test stopped. No audio latency data recorded.';
                 }
