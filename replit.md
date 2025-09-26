@@ -1,6 +1,6 @@
 # Overview
 
-This is a web-based Headphone Latency Tester application built with vanilla HTML, CSS, and JavaScript. The tool is designed to measure and test audio latency in headphones or audio devices through a browser interface. It provides a simple, user-friendly way to assess audio delay and performance characteristics of connected audio equipment.
+This is a web-based Headphone Latency Tester application built with vanilla HTML, CSS, and JavaScript. The tool is designed to measure audio latency in headphones or audio devices through a browser interface. It provides a precise, user-friendly way to assess the actual audio delay between when sound is generated and when it's heard through audio equipment. The app uses professional-grade timing techniques and averages 20 measurements for accurate results.
 
 # User Preferences
 
